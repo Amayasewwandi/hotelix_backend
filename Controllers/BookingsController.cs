@@ -21,21 +21,29 @@ public class BookingsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Booking>> PostBooking(Booking booking)
     {
-        var existingBooking = await _context.Bookings
-            .Where(b => b.RoomId == booking.RoomId &&
-                        b.CheckIn < booking.CheckOut &&
-                        b.CheckOut > booking.CheckIn)
-            .FirstOrDefaultAsync();
-
-        if (existingBooking != null)
+        try
         {
-            return BadRequest(new { message = "This room is already booked for the selected dates. Please choose different dates." });
+            // Date overlap validation (සංසන්දනය කිරීම පහසු වීමට .Date භාවිතා කිරීම)
+            var existingBooking = await _context.Bookings
+                .Where(b => b.RoomId == booking.RoomId &&
+                            b.CheckIn.Date < booking.CheckOut.Date &&
+                            b.CheckOut.Date > booking.CheckIn.Date)
+                .FirstOrDefaultAsync();
+
+            if (existingBooking != null)
+            {
+                return BadRequest(new { message = "This room is already booked for the selected dates. Please choose different dates." });
+            }
+
+            _context.Bookings.Add(booking);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetBookings), new { id = booking.BookingId }, booking);
         }
-
-        _context.Bookings.Add(booking);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetBookings), new { id = booking.BookingId }, booking);
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Database error: " + ex.Message });
+        }
     }
 
     [HttpDelete("{id}")]
