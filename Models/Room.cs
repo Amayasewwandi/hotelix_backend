@@ -10,7 +10,7 @@ public class Room
 
     [Required]
     [Column("room_type")]
-    public string RoomType { get; set; }
+    public required string RoomType { get; set; }
 
     [Column("price", TypeName = "decimal(10,2)")]
     public decimal Price { get; set; }
