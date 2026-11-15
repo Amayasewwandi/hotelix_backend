@@ -64,6 +64,26 @@ public class BookingsController : ControllerBase
         return CreatedAtAction(nameof(GetBookings), new { id = booking.BookingId }, booking);
     }
 
+    // Guest cancellation: the supplied user ID must own this booking.
+    // Full identity verification requires the JWT authentication planned for a later security update.
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> CancelBooking(int id, [FromQuery] int userId)
+    {
+        var booking = await _context.Bookings.FindAsync(id);
+        if (booking == null) return NotFound(new { message = "Booking not found." });
+        if (booking.UserId != userId) return Forbid();
+
+        var status = (booking.Status ?? string.Empty).Trim();
+        if (!new[] { "Confirmed", "Pending", "Booked" }.Contains(status, StringComparer.OrdinalIgnoreCase))
+            return Conflict(new { message = "This booking can no longer be cancelled." });
+        if (booking.CheckIn.Date <= DateTime.UtcNow.Date)
+            return Conflict(new { message = "A booking cannot be cancelled on or after its check-in date. Please contact the hotel." });
+
+        booking.Status = "Cancelled";
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Booking cancelled successfully.", bookingId = booking.BookingId, status = booking.Status });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBooking(int id)
     {
