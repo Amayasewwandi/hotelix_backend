@@ -77,7 +77,7 @@ try
             new Room { RoomType = "Overwater Villa", Price = 350m, Status = "Available" },
             new Room { RoomType = "Penthouse Suite", Price = 450m, Status = "Available" },
             new Room { RoomType = "Cozy Garden Studio", Price = 130m, Status = "Available" },
-            new Room { RoomType = "Ocean View Studio", Price = 180m, Status = "Available" }
+            new Room { RoomType = "Deluxe Double Room", Price = 180m, Status = "Available" }
         );
         await db.SaveChangesAsync();
     }
