@@ -1,3 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+                       ?? "Server=your_aiven_host;Port=3306;Database=defaultdb;Uid=avnadmin;Pwd=your_password;SslMode=Required;";
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 var builder = WebApplication.CreateBuilder(args);
 
 // Add CORS policy to allow Frontend to connect
