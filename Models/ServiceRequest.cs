@@ -13,10 +13,10 @@ public class ServiceRequest
 
     [Required]
     [Column("service_type")]
-    public string ServiceType { get; set; }
+    public required string ServiceType { get; set; }
 
     [Column("details")]
-    public string Details { get; set; }
+    public string? Details { get; set; }
 
     [Column("status")]
     public string Status { get; set; } = "Pending";
