@@ -26,6 +26,23 @@ public class ServicesController : ControllerBase
         return CreatedAtAction(nameof(GetServices), new { id = service.OrderId }, service);
     }
 
+    // Guests may cancel their own requests only while they are still Pending.
+    // Full identity verification requires the JWT authentication planned for a later security update.
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> CancelService(int id, [FromQuery] int userId)
+    {
+        var service = await _context.Services.FindAsync(id);
+        if (service == null) return NotFound(new { message = "Order or service request not found." });
+        if (service.UserId != userId) return Forbid();
+
+        if (!string.Equals(service.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            return Conflict(new { message = "This order can no longer be cancelled because it is already being processed." });
+
+        service.Status = "Cancelled";
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Order cancelled successfully.", orderId = service.OrderId, status = service.Status });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteService(int id)
     {
