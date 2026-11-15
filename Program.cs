@@ -1,40 +1,47 @@
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Add CORS Policy (සියලුම Origins වලට අවසර දීම සඳහා)
+// 1. Configure CORS for the Hotelix frontend
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("https://hotelix-project.vercel.app")
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
-// Add services to the container.
-builder.Services.AddControllers();
+// 2. Register controllers and views
+builder.Services.AddControllersWithViews();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                       ?? "Server=avnadmin:password@host:port/defaultdb;SslMode=Required;";
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
+// 3. Configure Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 2. Use CORS (Middlewares අතර මුලින්ම මෙය තැබිය යුතුය)
-app.UseCors("AllowAll");
+// 4. Configure middleware
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.UseHttpsRedirection();
+app.UseRouting();
+
+// CORS must be after UseRouting
+// and before authorization
+app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 
+// 5. Map API controllers
 app.MapControllers();
+
+// 6. Map MVC routes
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
