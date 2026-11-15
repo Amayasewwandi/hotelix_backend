@@ -15,6 +15,53 @@ public class AuthController : ControllerBase
         _context = context;
     }
 
+
+    // Public self-registration is restricted to Guest accounts.
+    // Admin and Staff accounts must be created and managed privately.
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] GuestRegistrationRequest request)
+    {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        var name = request.Name.Trim();
+
+        var existingUser = await _context.Users
+            .AnyAsync(u => u.Email.ToLower() == email);
+
+        if (existingUser)
+            return Conflict(new { message = "An account with this email already exists. Please log in instead." });
+
+        var user = new User
+        {
+            Name = name,
+            Email = email,
+            PasswordHash = HashPassword(request.Password),
+            Role = "Guest"
+        };
+
+        _context.Users.Add(user);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Also handles two registration requests arriving for the same email.
+            return Conflict(new { message = "An account with this email already exists. Please log in instead." });
+        }
+
+        return StatusCode(StatusCodes.Status201Created, new
+        {
+            userId = user.UserId,
+            name = user.Name,
+            email = user.Email,
+            role = user.Role
+        });
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
@@ -99,4 +146,21 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 
     public string? Role { get; set; }
+}
+
+public class GuestRegistrationRequest
+{
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [StringLength(128)]
+    public string Password { get; set; } = string.Empty;
 }
